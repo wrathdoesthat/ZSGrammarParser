@@ -110,7 +110,7 @@ generate_function_snippet :: proc(name: string, fn_doc_paths: map[string]string,
 	arguments_string := strings.concatenate({"(", strings.to_string(argbuilder), ")"})
 
 	snips[name] = SnippetDef {
-		prefix = name,
+		prefix = strings.concatenate({name, "()"}),
 		body   = strings.concatenate({name, arguments_string}),
 	}
 }
