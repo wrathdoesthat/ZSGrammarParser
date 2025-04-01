@@ -1,0 +1,95 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "catspeak",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#types"
+		},
+		{
+			"include": "#variables"
+		},
+		{
+			"include": "#functionnames"
+		},
+		{
+			"include": "#functioncalls"
+		},
+		{
+			"include": "#numericconstants"
+		},
+		{
+			"include": "#constants"
+		},
+		{
+			"include": "#operators"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.catspeak",
+				"match": "\\b(if|else|return|with|match|while|loop|do|catch|continue|new)\\b"
+			}]
+		},
+		"constants": {
+			"patterns": [{
+				"name": "constant.catspeak",
+				"match": "\\b(true|false|undefined|infinity|NaN)\\b"
+			}]
+		},
+		"numericconstants": {
+			"patterns": [{
+				"name": "constant.numeric.catspeak",
+				"match": "\\b-?(?:(\\d{1,3}(?:_\\d{3})*|\\d+)(?:\\.\\d+)?|0b[01_]+|0x[0-9A-Fa-f_]+|#([0-9A-Fa-f_]+))\\b"
+			}]
+		},
+		"operators": {
+			"patterns": [{
+				"name": "keyword.operator.catspeak",
+				"match": "\\b(and|or|xor)\\b"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.catspeak",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.catspeak",
+					"match": "\\\\."
+				}
+			]
+		},
+		"types": {
+			"patterns": [{
+				"name": "storage.type.catspeak",
+				"match": "\\b(let|fun)\\b"
+			}]
+		},
+		"variables": {
+			"patterns": [{
+				"name": "variable.other.catspeak",
+				"match": "(?<=[^.]\\.|:)\\b([A-Za-z_]\\w*)"
+			}]
+		},
+		"functionnames": {
+			"patterns": [{
+				"name": "entity.name.function.catspeak",
+				"match": "(\\w+)(?=\\s*=\\sfun)"
+			}]
+		},
+		"functioncalls": {
+			"patterns": [{
+				"name": "meta.function-call.catspeak",
+				"match": "\\b\\w+(?=\\()"
+			}]
+		}
+	},
+	"scopeName": "source.catspeak"
+}
