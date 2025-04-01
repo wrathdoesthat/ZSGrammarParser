@@ -45,9 +45,7 @@ generate_function_snippet :: proc(name: string, fn_doc_paths: map[string]string,
 		idx := strings.index(data_as_str, searching_for)
 
 		// couldnt find function name in documentation paths
-		if idx == -1 {
-			return
-		}
+		if idx == -1 {return}
 
 		scanner_substr := data_as_str[idx + len(name):idx + 2048]
 
@@ -57,38 +55,38 @@ generate_function_snippet :: proc(name: string, fn_doc_paths: map[string]string,
 		// skip (
 		scanner.scan(&s)
 
-		// Function has no arguments
-		if (scanner.peek(&s) == ')') {}
-
-		for {
-			scanned := scanner.scan(&s)
-
-			// We have a default argument in the documentation
-			// Maybe these could be used later somehow but for nowe we 
-			if scanner.peek(&s) == '=' {
-				append(&arguments, strings.clone(scanner.token_text(&s)))
-
-				// Skip = part of default arguments
-				scanner.scan(&s)
-
-				// If default argument was an array scan until the end
-				if scanner.peek(&s) == '[' {
-					for scanner.scan(&s) != ']' {}
-				} else { // Skip default argument
+		// Function has arguments because next character isnt closing bracket
+		if (scanner.peek(&s) != ')') {
+			for {
+				scanned := scanner.scan(&s)
+	
+				// We have a default argument in the documentation
+				// Maybe these could be used later somehow but for nowe we 
+				if scanner.peek(&s) == '=' {
+					append(&arguments, strings.clone(scanner.token_text(&s)))
+	
+					// Skip = part of default arguments
 					scanner.scan(&s)
+	
+					// If default argument was an array scan until the end
+					if scanner.peek(&s) == '[' {
+						for scanner.scan(&s) != ']' {}
+					} else { // Skip default argument
+						scanner.scan(&s)
+					}
 				}
-			}
-
-			// parsed a full argument
-			if scanner.peek(&s) == ',' {
-				append(&arguments, strings.clone(scanner.token_text(&s)))
-				continue
-			}
-
-			// Reached the end of arguments
-			if scanner.peek(&s) == ')' {
-				append(&arguments, strings.clone(scanner.token_text(&s)))
-				break
+	
+				// parsed a full argument
+				if scanner.peek(&s) == ',' {
+					append(&arguments, strings.clone(scanner.token_text(&s)))
+					continue
+				}
+	
+				// Reached the end of arguments
+				if scanner.peek(&s) == ')' {
+					append(&arguments, strings.clone(scanner.token_text(&s)))
+					break
+				}
 			}
 		}
 	}
