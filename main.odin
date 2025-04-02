@@ -24,9 +24,13 @@ constant_prefixes: []string = {
 	"FACTION_REP_"
 }
 
+SnippetType :: enum {
+	Function, // 
+}
+
 SnippetDef :: struct {
 	prefix: string,
-	body:   string,
+	body:   string, 
 }
 
 generate_function_snippet :: proc(name: string, fn_doc_paths: map[string]string, snips: ^map[string]SnippetDef) {
@@ -74,6 +78,14 @@ generate_function_snippet :: proc(name: string, fn_doc_paths: map[string]string,
 					} else { // Skip default argument
 						scanner.scan(&s)
 					}
+
+					// The default part was the last part of our arguments just leave
+					if scanner.peek(&s) == ')' {
+						break
+					}
+					else { // We have another argument probably continue parsing
+						continue
+					}
 				}
 	
 				// parsed a full argument
@@ -113,6 +125,8 @@ generate_function_snippet :: proc(name: string, fn_doc_paths: map[string]string,
 		prefix = strings.concatenate({name, "()"}),
 		body   = strings.concatenate({name, arguments_string}),
 	}
+
+	fmt.println(strings.concatenate({name, arguments_string}))
 }
 
 main :: proc() {
