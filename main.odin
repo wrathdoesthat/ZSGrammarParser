@@ -26,114 +26,84 @@ constant_prefixes: []string = {
 	"FACTION_REP_"
 }
 
-SnippetType :: enum {
-	Function, // ItemCreate(item_id, category="none");
-	Constant, // MAP_city
-	Asset     // "s_aim_pointer"
-}
-
 SnippetDef :: struct {
 	prefix: string,
 	body:   string, 
-	type:   SnippetType`json:"-"`
 }
 
-generate_function_snippet :: proc(name: string, fn_doc_paths: map[string]string, snips: ^map[string]SnippetDef, cli_args: CLIArguments) {
+get_function_arguments :: proc(name: string, fn_doc_paths: map[string]string, cli_args: CLIArguments) -> [dynamic]string {
 	arguments: [dynamic]string
 
-	if name in fn_doc_paths {
-		doc_path := fn_doc_paths[name]
-		file_data, read_err := os2.read_entire_file_from_path(doc_path, context.temp_allocator)
-		if read_err != os2.ERROR_NONE {
-			fmt.println("Error reading fn doc at path", name)
-			return
-		}
+	doc_path := fn_doc_paths[name]
+	file_data, read_err := os2.read_entire_file_from_path(doc_path, context.temp_allocator)
+	if read_err != os2.ERROR_NONE {
+		fmt.println("Error reading fn doc at path", doc_path)
+		return {}
+	}
 
-		data_as_str := string(file_data)
-		searching_for := strings.concatenate({name, "("})
-		idx := strings.index(data_as_str, searching_for)
+	data_as_str := string(file_data)
+	searching_for := strings.concatenate({name, "("})
+	idx := strings.index(data_as_str, searching_for)
 
-		// couldnt find function name in documentation paths
-		if idx == -1 {return}
+	// couldnt find function name in documentation paths
+	if idx == -1 {
+		if cli_args.verbose do fmt.println("Error finding the function body for", name)
+		return {}
+	}
 
-		scanner_substr := data_as_str[idx + len(name):idx + 2048]
+	scanner_substr := data_as_str[idx + len(name):idx + 2048]
 
-		s: scanner.Scanner
-		s = scanner.init(&s, scanner_substr)^
+	s: scanner.Scanner
+	s = scanner.init(&s, scanner_substr)^
 
-		// skip (
-		scanner.scan(&s)
+	// skip (
+	scanner.scan(&s)
 
-		// Function has arguments because next character isnt closing bracket
-		if (scanner.peek(&s) != ')') {
-			for {
-				scanned := scanner.scan(&s)
-	
-				// We have a default argument in the documentation
-				// Maybe these could be used later somehow but for nowe we 
-				if scanner.peek(&s) == '=' {
-					append(&arguments, strings.clone(scanner.token_text(&s)))
-	
-					// Skip = part of default arguments
+	// Function has arguments because next character isnt closing bracket
+	if (scanner.peek(&s) != ')') {
+		for {
+			scanned := scanner.scan(&s)
+
+			// We have a default argument in the documentation
+			// Maybe these could be used later somehow but for nowe we 
+			if scanner.peek(&s) == '=' {
+				append(&arguments, strings.clone(scanner.token_text(&s)))
+
+				// Skip = part of default arguments
+				scanner.scan(&s)
+
+				// If default argument was an array scan until the end
+				if scanner.peek(&s) == '[' {
+					// we can just discard everything inside of the array
+					for scanner.scan(&s) != ']' {}
+				} else { // Skip default argument
 					scanner.scan(&s)
-	
-					// If default argument was an array scan until the end
-					if scanner.peek(&s) == '[' {
-						// we can just discard everything inside of the array
-						for scanner.scan(&s) != ']' {}
-					} else { // Skip default argument
-						scanner.scan(&s)
-					}
+				}
 
-					// The default part was the last part of our arguments just leave
-					if scanner.peek(&s) == ')' {
-						break
-					}
-					else { // We have another argument probably continue parsing
-						continue
-					}
-				}
-	
-				// parsed a full argument
-				if scanner.peek(&s) == ',' {
-					append(&arguments, strings.clone(scanner.token_text(&s)))
-					continue
-				}
-	
-				// Reached the end of arguments
+				// The default part was the last part of our arguments just leave
 				if scanner.peek(&s) == ')' {
-					append(&arguments, strings.clone(scanner.token_text(&s)))
 					break
 				}
+				else { // We have another argument probably continue parsing
+					continue
+				}
+			}
+
+			// parsed a full argument
+			if scanner.peek(&s) == ',' {
+				append(&arguments, strings.clone(scanner.token_text(&s)))
+				continue
+			}
+
+			// Reached the end of arguments
+			if scanner.peek(&s) == ')' {
+				append(&arguments, strings.clone(scanner.token_text(&s)))
+				break
 			}
 		}
-	} else {
-		if cli_args.verbose do fmt.println(name, "does not have an associated documentation file")
 	}
 
-	argbuf: [1024]byte
-	argbuilder := strings.builder_from_bytes(argbuf[:])
-
-	for arg, i in arguments {
-		strings.write_string(&argbuilder, "${")
-		strings.write_int(&argbuilder, i + 1)
-		strings.write_string(&argbuilder, ":")
-		strings.write_string(&argbuilder, arg)
-
-		if i == len(arguments) - 1 {
-			strings.write_string(&argbuilder, "}")
-		} else {
-			strings.write_string(&argbuilder, "}, ")
-		}
-	}
-
-	arguments_string := strings.concatenate({"(", strings.to_string(argbuilder), ")"})
-
-	snips[name] = SnippetDef {
-		prefix = strings.concatenate({name, "()"}),
-		body   = strings.concatenate({name, arguments_string}),
-		type   = .Function
-	}
+	return arguments
 }
 
 main :: proc() {
@@ -171,6 +141,9 @@ main :: proc() {
 		}
 	}
 
+	functions 		: [dynamic]string
+	constants 		: [dynamic]string
+	assets    		: [dynamic]string
 	discarded_names : [dynamic]string
 
 	if !cli_args.disable_snippets {
@@ -187,7 +160,7 @@ main :: proc() {
 		w := os2.walker_create(strings.concatenate({cli_args.path_to_documentation, "/Functions"}))
 		for fi in os2.walker_walk(&w) {
 			if path, err := os2.walker_error(&w); err != nil {
-				fmt.eprintfln("failed walking %s: %s", path, err)
+				fmt.println("failed walking", path, err)
 				continue
 			}
 
@@ -202,19 +175,20 @@ main :: proc() {
 
 		snippet_map: map[string]SnippetDef
 		parsing_functions := true
+		undocumented_functions : [dynamic]string
 
 		data_string := string(exposed_value_data)
-		for line in strings.split_lines_iterator(&data_string) {
+		for name in strings.split_lines_iterator(&data_string) {
 			// Seems like functions and prefixed constants only appear before this
-			if strings.index(line, "YYInternalObject") != -1 {
+			if strings.index(name, "YYInternalObject") != -1 {
 				parsing_functions = false
-				if cli_args.verbose do append(&discarded_names, line)
+				if cli_args.verbose do append(&discarded_names, name)
 				continue
 			}
 
 			// there are some names like object23432 sprite443 not sure what they are but discard
-			if strings.starts_with(line, "Sprite2058") || strings.starts_with(line, "object") || strings.starts_with(line, "sprite") {
-				if cli_args.verbose do append(&discarded_names, line)
+			if strings.starts_with(name, "Sprite2058") || strings.starts_with(name, "object") || strings.starts_with(name, "sprite") {
+				if cli_args.verbose do append(&discarded_names, name)
 				continue
 			}
 
@@ -222,33 +196,65 @@ main :: proc() {
 				// Prefixed constants are above the internal object with the functions
 				was_constant := false
 				for prefix in constant_prefixes {
-					if strings.starts_with(line, prefix) {
-						snippet_map[line] = SnippetDef {
-							prefix = line,
-							body   = strings.clone(line),
-							type   = .Constant
+					if strings.starts_with(name, prefix) {
+						snippet_map[name] = SnippetDef {
+							prefix = name,
+							body   = strings.clone(name),
 						}
 						was_constant = true
+
+						append(&constants, name)
 						break
 					}
 				}
 				if was_constant {continue}
 
 				// Cant be a function likely an "asset" or enum this shouldnt really be hit because of the constants check unless they add new ones
-				if strings.index(line, "_") != -1 {
-					if cli_args.verbose do append(&discarded_names, line)
+				if strings.index(name, "_") != -1 {
+					if cli_args.verbose do append(&discarded_names, name)
 					continue
 				}
 
-				generate_function_snippet(line, fn_doc_paths, &snippet_map, cli_args)
+				arguments : [dynamic]string
+
+				if name in fn_doc_paths {
+					arguments = get_function_arguments(name, fn_doc_paths, cli_args)
+				}
+				else {
+					append(&undocumented_functions, name)
+				}
+
+				argbuf: [1024]byte
+				argbuilder := strings.builder_from_bytes(argbuf[:])
+			
+				for arg, i in arguments {
+					strings.write_string(&argbuilder, "${")
+					strings.write_int(&argbuilder, i + 1)
+					strings.write_string(&argbuilder, ":")
+					strings.write_string(&argbuilder, arg)
+			
+					if i == len(arguments) - 1 {
+						strings.write_string(&argbuilder, "}")
+					} else {
+						strings.write_string(&argbuilder, "}, ")
+					}
+				}
+			
+				arguments_string := strings.concatenate({"(", strings.to_string(argbuilder), ")"})
+			
+				snippet_map[name] = SnippetDef {
+					prefix = strings.concatenate({name, "()"}),
+					body   = strings.concatenate({name, arguments_string})
+				}
+				append(&functions, name)
 			} else {
 				// Asset snippets break if disabled
 				if cli_args.disable_asset_snippets {break} 
-				snippet_map[line] = SnippetDef {
-					prefix = line,
-					body   = strings.concatenate({"\"", line, "\""}),
-					type   = .Asset
+				snippet_map[name] = SnippetDef {
+					prefix = name,
+					body   = strings.concatenate({"\"", name, "\""})
 				}
+				append(&assets, name)
 			}
 		}
 
@@ -264,25 +270,8 @@ main :: proc() {
 			// Values in exposed_values.txt we discarded (logged in case im discarding something wrong)
 			_ = os2.write_entire_file("./ZSGrammar/__internal/discarded.txt", transmute([]u8)strings.join(discarded_names[:], "\n"))
 
-			functions : [dynamic]string
-			constants : [dynamic]string
-			assets    : [dynamic]string
-
-			for name in snippet_map {
-				snippet := snippet_map[name]
-
-				switch snippet.type {
-					case .Function: {
-						append(&functions, snippet.body)
-					}
-					case .Constant: {
-						append(&constants, snippet.body)
-					}
-					case .Asset: {
-						append(&assets, snippet.body)
-					}
-				}
-			}
+			// functions we couldnt find documentation for
+			_ = os2.write_entire_file("./ZSGrammar/__internal/undocumented_functions.txt", transmute([]u8)strings.join(undocumented_functions[:], "\n"))
 
 			_ = os2.write_entire_file("./ZSGrammar/__internal/functions.txt", transmute([]u8)strings.join(functions[:], "\n"))
 			_ = os2.write_entire_file("./ZSGrammar/__internal/constants.txt", transmute([]u8)strings.join(constants[:], "\n"))
