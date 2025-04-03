@@ -35,7 +35,7 @@ SnippetType :: enum {
 SnippetDef :: struct {
 	prefix: string,
 	body:   string, 
-	type:   SnippetType
+	type:   SnippetType`json:"-"`
 }
 
 generate_function_snippet :: proc(name: string, fn_doc_paths: map[string]string, snips: ^map[string]SnippetDef, cli_args: CLIArguments) {
@@ -261,7 +261,7 @@ main :: proc() {
 		if cli_args.verbose {
 			os2.make_directory("./ZSGrammar/__internal")
 
-			// Values we discarded (logged in case im discarding something wrong)
+			// Values in exposed_values.txt we discarded (logged in case im discarding something wrong)
 			_ = os2.write_entire_file("./ZSGrammar/__internal/discarded.txt", transmute([]u8)strings.join(discarded_names[:], "\n"))
 
 			functions : [dynamic]string
