@@ -1,0 +1,192 @@
+{
+    // The snippets of exposed GML functions
+    // Math
+    "Min": {
+        "prefix": "Min()",
+        "body": "Min(${1:n1}, ${2:n2})"
+    },
+    "Max": {
+        "prefix": "Max()",
+        "body": "Max(${1:n1}, ${2:n2})"
+    },
+    "Round": {
+        "prefix": "Round()",
+        "body": "Round(${1:n})"
+    },
+    "Floor": {
+        "prefix": "Floor()",
+        "body": "Floor(${1:n})"
+    },
+    "Ceil": {
+        "prefix": "Ceil()",
+        "body": "Ceil(${1:n})"
+    },
+    "Mean": {
+        "prefix": "Mean()",
+        "body": "Mean(${1:n1}, ${2:n2})"
+    },
+    "Median": {
+        "prefix": "Median()",
+        "body": "Median(${1:n1}, ${2:n2})"
+    },
+    "Clamp": {
+        "prefix": "Clamp()",
+        "body": "Clamp(${1:n}, ${2:min}, ${3:max})"
+    },
+    "Frac": {
+        "prefix": "Frac()",
+        "body": "Frac(${1:n})"
+    },
+    "Abs": {
+        "prefix": "Abs()",
+        "body": "Abs(${1:n})"
+    },
+    "Sign": {
+        "prefix": "Sign()",
+        "body": "Sign(${1:n})"
+    },
+    "Lerp": {
+        "prefix": "Lerp()",
+        "body": "Lerp(${1:n1}, ${2:n2}, ${3:amt})"
+    },
+    "Exp": {
+        "prefix": "Exp()",
+        "body": "Exp(${1:n})"
+    },
+    "Ln": {
+        "prefix": "Ln()",
+        "body": "Ln(${1:n})"
+    },
+    "Power": { 
+        "prefix": "Power()",
+        "body": "Power(${1:n}, ${2:x})"
+    },
+    "Sqr": {
+        "prefix": "Sqr()",
+        "body": "Sqr(${1:n})"
+    },
+    "Sqrt": {
+        "prefix": "Sqrt()",
+        "body": "Sqrt(${1:n})"
+    },
+    "Log2": {
+        "prefix": "Log2()",
+        "body": "Log2(${1:n})"
+    },
+    "Log10": {
+        "prefix": "Log10()",
+        "body": "Log10(${1:n})"
+    },
+    "Logn": {
+        "prefix": "Logn()",
+        "body": "Logn(${1:base}, ${2:base})"
+    },
+    "Choose": {
+        "prefix": "Choose()",
+        "body": "Choose(${1:val1}, ${2:val2})"
+    },
+    "Random": {
+        "prefix": "Random()",
+        "body": "Random(${1:n})"
+    },
+    "RandomRange": {
+        "prefix": "RandomRange()",
+        "body": "RandomRange(${1:n1}, ${2:n2})"
+    },
+    "Irandom": {
+        "prefix": "Irandom()",
+        "body": "Irandom(${1:n})"
+    },
+    "IrandomRange": {
+        "prefix": "IrandomRange()",
+        "body": "IrandomRange(${1:n1}, ${2:n2})"
+    },
+    "Arccos": {
+        "prefix": "Arccos()",
+        "body": "Arccos(${1:n})"
+    },
+    "Arcsin": {
+        "prefix": "Arcsin()",
+        "body": "Arcsin(${1:n})"
+    },
+    "Arctan": {
+        "prefix": "Arctan()",
+        "body": "Arctan(${1:n})"
+    },
+    "Arctan2": {
+        "prefix": "Arctan2()",
+        "body": "Arctan2(${1:y}, ${2:x})"
+    },
+    "Cos": {
+        "prefix": "Cos()",
+        "body": "Cos(${1:n})"
+    },
+    "Sin": {
+        "prefix": "Sin()",
+        "body": "Sin(${1:n})"
+    },
+    "Tan": {
+        "prefix": "Tan()",
+        "body": "Tan(${1:n})"
+    },
+    "Dcos": {
+        "prefix": "Dcos()",
+        "body": "Dcos(${1:n})"
+    },
+    "Dsin": {
+        "prefix": "Dsin()",
+        "body": "Dsin(${1:n})"
+    },
+    "Dtan": {
+        "prefix": "Dtan()",
+        "body": "Dtan(${1:n})"
+    },
+    "Darccos": {
+        "prefix": "Darccos()",
+        "body": "Darccos(${1:n})"
+    },
+    "Darcsin": {
+        "prefix": "Darcsin()",
+        "body": "Darcsin(${1:n})"
+    },
+    "Darctan": {
+        "prefix": "Darctan()",
+        "body": "Darctan(${1:n})"
+    },
+    "Darctan2": {
+        "prefix": "Darctan2()",
+        "body": "Darctan2(${1:y}, ${2:x})"
+    },
+    "DegToRad": {
+        "prefix": "DegToRad()",
+        "body": "DegToRad(${1:n})"
+    },
+    "RadToDeg": {
+        "prefix": "RadToDeg()",
+        "body": "RadToDeg(${1:n})"
+    },
+    "DotProduct": {
+        "prefix": "DotProduct()",
+        "body": "DotProduct(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2})"
+    },
+    "PointDirection": {
+        "prefix": "PointDirection()",
+        "body": "PointDirection(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2})"
+    },
+    "PointDistance": {
+        "prefix": "PointDistance()",
+        "body": "PointDistance(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2})"
+    },
+    "LengthDirX": {
+        "prefix": "LengthDirX()",
+        "body": "LengthDirX(${1:len}, ${2:dir})"
+    },
+    "LengthDirY": {
+        "prefix": "LengthDirY()",
+        "body": "LengthDirY(${1:len}, ${2:dir})"
+    },
+    "AngleDifference": {
+        "prefix": "AngleDifference()",
+        "body": "AngleDifference(${1:dest}, ${2:src})"
+    }
+}

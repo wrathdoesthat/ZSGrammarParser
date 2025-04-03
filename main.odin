@@ -10,9 +10,9 @@ import "core:text/scanner"
 import "core:path/filepath"
 
 CLIArguments :: struct {
-	path_to_documentation:  string `args:"pos=0,required" usage:"Path to game modding documentation folder."`,
-	disable_snippets:       bool `usage:"Set to disable all snippets (function and asset)"`,
-	disable_asset_snippets: bool `usage:"Set to disable only the asset snippets"`,
+	path_to_documentation:  	string `args:"pos=0,required" usage:"Path to game modding documentation folder."`,
+	disable_snippets:       	bool `usage:"Set to disable all snippets (function and asset)"`,
+	disable_asset_snippets: 	bool `usage:"Set to disable only the asset snippets"`,
 
 	// Debug only pretty much
 	verbose: bool `usage:"Set to enable extra information output (if snippets are enabled it outputs an __internal folder in the generated plugin with extra info aswell)"`
@@ -65,7 +65,7 @@ get_function_arguments :: proc(name: string, fn_doc_paths: map[string]string, cl
 			scanned := scanner.scan(&s)
 
 			// We have a default argument in the documentation
-			// Maybe these could be used later somehow but for nowe we 
+			// Maybe these could be used later somehow but for now we discard
 			if scanner.peek(&s) == '=' {
 				append(&arguments, strings.clone(scanner.token_text(&s)))
 
@@ -141,9 +141,29 @@ main :: proc() {
 		}
 	}
 
+	snippet_map: map[string]SnippetDef
+
+	gamemaker_snippets : map[string]SnippetDef
+	gamemaker_snippet_data, read_err := os2.read_entire_file_from_path("./builtin_snippets/gamemaker.jsonc", context.allocator)
+
+	if read_err != os2.ERROR_NONE {
+		fmt.println("Error opening ./builtin_snippets/gamemaker.jsonc", read_err)
+		return
+	}
+
+	unmarshal_err := json.unmarshal(gamemaker_snippet_data, &gamemaker_snippets, .JSON5)
+	if unmarshal_err != nil {
+		fmt.println("Error loading ./builtin_snippets/gamemaker.jsonc", unmarshal_err)
+		return
+	}
+
+	for snippet in gamemaker_snippets {
+		snippet_map[snippet] = gamemaker_snippets[snippet]
+	}
+
+	assets    		: [dynamic]string
 	functions 		: [dynamic]string
 	constants 		: [dynamic]string
-	assets    		: [dynamic]string
 	discarded_names : [dynamic]string
 
 	if !cli_args.disable_snippets {
@@ -173,7 +193,6 @@ main :: proc() {
 			fn_doc_paths[strings.clone(split_path[0])] = strings.clone(fi.fullpath)
 		}
 
-		snippet_map: map[string]SnippetDef
 		parsing_functions := true
 		undocumented_functions : [dynamic]string
 
@@ -212,6 +231,12 @@ main :: proc() {
 				// Cant be a function likely an "asset" or enum this shouldnt really be hit because of the constants check unless they add new ones
 				if strings.index(name, "_") != -1 {
 					if cli_args.verbose do append(&discarded_names, name)
+					continue
+				}
+
+				// Was likely pre filled
+				if name in snippet_map {
+					//if cli_args.verbose do fmt.println(name, "was already in snippet map")
 					continue
 				}
 
@@ -267,12 +292,9 @@ main :: proc() {
 		if cli_args.verbose {
 			os2.make_directory("./ZSGrammar/__internal")
 
-			// Values in exposed_values.txt we discarded (logged in case im discarding something wrong)
+			// Output verbose info
 			_ = os2.write_entire_file("./ZSGrammar/__internal/discarded.txt", transmute([]u8)strings.join(discarded_names[:], "\n"))
-
-			// functions we couldnt find documentation for
 			_ = os2.write_entire_file("./ZSGrammar/__internal/undocumented_functions.txt", transmute([]u8)strings.join(undocumented_functions[:], "\n"))
-
 			_ = os2.write_entire_file("./ZSGrammar/__internal/functions.txt", transmute([]u8)strings.join(functions[:], "\n"))
 			_ = os2.write_entire_file("./ZSGrammar/__internal/constants.txt", transmute([]u8)strings.join(constants[:], "\n"))
 			_ = os2.write_entire_file("./ZSGrammar/__internal/assets.txt", transmute([]u8)strings.join(assets[:], "\n"))
