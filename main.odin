@@ -141,32 +141,32 @@ main :: proc() {
 		}
 	}
 
-	snippet_map: map[string]SnippetDef
-
-	gamemaker_snippets : map[string]SnippetDef
-	gamemaker_snippet_data, read_err := os2.read_entire_file_from_path("./builtin_snippets/gamemaker.jsonc", context.allocator)
-
-	if read_err != os2.ERROR_NONE {
-		fmt.println("Error opening ./builtin_snippets/gamemaker.jsonc", read_err)
-		return
-	}
-
-	unmarshal_err := json.unmarshal(gamemaker_snippet_data, &gamemaker_snippets, .JSON5)
-	if unmarshal_err != nil {
-		fmt.println("Error loading ./builtin_snippets/gamemaker.jsonc", unmarshal_err)
-		return
-	}
-
-	for snippet in gamemaker_snippets {
-		snippet_map[snippet] = gamemaker_snippets[snippet]
-	}
-
 	assets    		: [dynamic]string
 	functions 		: [dynamic]string
 	constants 		: [dynamic]string
 	discarded_names : [dynamic]string
 
 	if !cli_args.disable_snippets {
+		snippet_map: map[string]SnippetDef
+
+		gamemaker_snippets : map[string]SnippetDef
+		gamemaker_snippet_data, read_err := os2.read_entire_file_from_path("./builtin_snippets/gamemaker.jsonc", context.allocator)
+	
+		if read_err != os2.ERROR_NONE {
+			fmt.println("Error opening ./builtin_snippets/gamemaker.jsonc", read_err)
+			return
+		}
+	
+		unmarshal_err := json.unmarshal(gamemaker_snippet_data, &gamemaker_snippets, .JSON5)
+		if unmarshal_err != nil {
+			fmt.println("Error loading ./builtin_snippets/gamemaker.jsonc", unmarshal_err)
+			return
+		}
+	
+		for snippet in gamemaker_snippets {
+			snippet_map[snippet] = gamemaker_snippets[snippet]
+		}
+
 		exposed_values_path := strings.concatenate({cli_args.path_to_documentation, "/exposed_values.txt"})
 		exposed_value_data, err := os2.read_entire_file_from_path(exposed_values_path, context.allocator)
 
