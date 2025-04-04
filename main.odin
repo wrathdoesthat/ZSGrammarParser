@@ -7,7 +7,6 @@ import "core:fmt"
 import "core:os/os2"
 import "core:strings"
 import "core:text/scanner"
-import "core:sys/windows"
 
 CLIArguments :: struct {
 	path_to_documentation:  string `args:"pos=0,required" usage:"Path to game modding documentation folder."`,
