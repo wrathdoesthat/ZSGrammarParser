@@ -7,12 +7,14 @@ import "core:fmt"
 import "core:os/os2"
 import "core:strings"
 import "core:text/scanner"
-import "core:path/filepath"
+import "core:sys/windows"
 
 CLIArguments :: struct {
-	path_to_documentation:  	string `args:"pos=0,required" usage:"Path to game modding documentation folder."`,
-	disable_snippets:       	bool `usage:"Set to disable all snippets (function and asset)"`,
-	disable_asset_snippets: 	bool `usage:"Set to disable only the asset snippets"`,
+	path_to_documentation:  string `args:"pos=0,required" usage:"Path to game modding documentation folder."`,
+	output_path:            string `usage:Changes the directory the plugin is output to (note: Deletes any old ZSGrammar folder in this directory too)`,
+
+	disable_snippets:       bool `usage:"Set to disable all snippets (function and asset)"`,
+	disable_asset_snippets: bool `usage:"Set to disable only the asset snippets"`,
 
 	// Debug only pretty much
 	verbose: bool `usage:"Set to enable extra information output (if snippets are enabled it outputs an __internal folder in the generated plugin with extra info aswell)"`
@@ -51,37 +53,37 @@ get_function_arguments :: proc(name: string, fn_doc_paths: map[string]string, cl
 		return {}
 	}
 
-	scanner_substr := data_as_str[idx + len(name):idx + 2048]
+	scanner_substr := data_as_str[idx + len(name):idx + 1024]
 
-	s: scanner.Scanner
-	s = scanner.init(&s, scanner_substr)^
+	s := new(scanner.Scanner)
+	s = scanner.init(s, scanner_substr)
 
 	// skip (
-	scanner.scan(&s)
+	scanner.scan(s)
 
 	// Function has arguments because next character isnt closing bracket
-	if (scanner.peek(&s) != ')') {
+	if (scanner.peek(s) != ')') {
 		for {
-			scanned := scanner.scan(&s)
+			scanned := scanner.scan(s)
 
 			// We have a default argument in the documentation
 			// Maybe these could be used later somehow but for now we discard
-			if scanner.peek(&s) == '=' {
-				append(&arguments, strings.clone(scanner.token_text(&s)))
+			if scanner.peek(s) == '=' {
+				append(&arguments, strings.clone(scanner.token_text(s)))
 
 				// Skip = part of default arguments
-				scanner.scan(&s)
+				scanner.scan(s)
 
 				// If default argument was an array scan until the end
-				if scanner.peek(&s) == '[' {
+				if scanner.peek(s) == '[' {
 					// we can just discard everything inside of the array
-					for scanner.scan(&s) != ']' {}
+					for scanner.scan(s) != ']' {}
 				} else { // Skip default argument
-					scanner.scan(&s)
+					scanner.scan(s)
 				}
 
 				// The default part was the last part of our arguments just leave
-				if scanner.peek(&s) == ')' {
+				if scanner.peek(s) == ')' {
 					break
 				}
 				else { // We have another argument probably continue parsing
@@ -90,14 +92,14 @@ get_function_arguments :: proc(name: string, fn_doc_paths: map[string]string, cl
 			}
 
 			// parsed a full argument
-			if scanner.peek(&s) == ',' {
-				append(&arguments, strings.clone(scanner.token_text(&s)))
+			if scanner.peek(s) == ',' {
+				append(&arguments, strings.clone(scanner.token_text(s)))
 				continue
 			}
 
 			// Reached the end of arguments
-			if scanner.peek(&s) == ')' {
-				append(&arguments, strings.clone(scanner.token_text(&s)))
+			if scanner.peek(s) == ')' {
+				append(&arguments, strings.clone(scanner.token_text(s)))
 				break
 			}
 		}
@@ -112,54 +114,66 @@ main :: proc() {
 	cli_args: CLIArguments
 	flags.parse_or_exit(&cli_args, os2.args)
 
+	output_path := ".\\"
+	if len(cli_args.output_path) > 0 {
+		output_path, _ = os2.clean_path(cli_args.output_path, context.allocator)	
+		if !os2.exists(cli_args.output_path) {
+			fmt.println("Output path doesnt exist", cli_args.output_path)
+			return
+		}
+	}
+
+	extension_path := strings.concatenate({output_path, "\\ZSGrammar\\"})
+
 	// Remove any old generated plugin
-	if os2.exists("./ZSGrammar/") {
-		os2.remove_all("./ZSGrammar/")
+	if os2.exists(extension_path) {
+		os2.remove_all(extension_path)
 	}
 
 	// copy over our skeleton plugin
-	plugin_dir_create_err := os2.make_directory("./ZSGrammar/")
+	plugin_dir_create_err := os2.make_directory(extension_path)
 	if plugin_dir_create_err != os2.ERROR_NONE {
-		fmt.println("Error creating ./ZSGrammar", plugin_dir_create_err)
+		fmt.println("Error creating", extension_path, plugin_dir_create_err)
 		return
 	}
 
-	w := os2.walker_create("./plugin_skeleton")
+	w := os2.walker_create(".\\plugin_skeleton")
 	for fi in os2.walker_walk(&w) {
 		if path, err := os2.walker_error(&w); err != nil {
 			fmt.eprintfln("failed walking %s: %s", path, err)
 			continue
 		}
-		
-		new_path_string, _ := strings.replace(fi.fullpath, "plugin_skeleton", "ZSGrammar", -1) 
-		new_path, _ := filepath.from_slash(new_path_string)
+
+		cleaned_path, _ := os2.clean_path(fi.fullpath, context.allocator)
+		replaced_path, _ := strings.replace_all(cleaned_path, "plugin_skeleton", "ZSGrammar")
+		full_path := strings.concatenate({output_path, "\\", replaced_path})
 
 		if fi.type == .Directory {
-			os2.make_directory(new_path)
+			os2.make_directory(full_path)
 		} else {
-			os2.copy_file(new_path, fi.fullpath)
-		}
+			os2.copy_file(full_path, fi.fullpath)
+		} 
 	}
 
-	assets    		: [dynamic]string
-	functions 		: [dynamic]string
-	constants 		: [dynamic]string
+	assets          : [dynamic]string
+	functions       : [dynamic]string
+	constants       : [dynamic]string
 	discarded_names : [dynamic]string
 
 	if !cli_args.disable_snippets {
 		snippet_map: map[string]SnippetDef
 
-		gamemaker_snippets : map[string]SnippetDef
-		gamemaker_snippet_data, read_err := os2.read_entire_file_from_path("./builtin_snippets/gamemaker.jsonc", context.allocator)
+        gamemaker_snippets : map[string]SnippetDef
+		gamemaker_snippet_data, read_err := os2.read_entire_file_from_path(".\\builtin_snippets\\gamemaker.jsonc", context.allocator)
 	
 		if read_err != os2.ERROR_NONE {
-			fmt.println("Error opening ./builtin_snippets/gamemaker.jsonc", read_err)
+			fmt.println("Error opening .\\builtin_snippets\\gamemaker.jsonc", read_err)
 			return
 		}
 	
 		unmarshal_err := json.unmarshal(gamemaker_snippet_data, &gamemaker_snippets, .JSON5)
 		if unmarshal_err != nil {
-			fmt.println("Error loading ./builtin_snippets/gamemaker.jsonc", unmarshal_err)
+			fmt.println("Error loading .\\builtin_snippets\\gamemaker.jsonc", unmarshal_err)
 			return
 		}
 	
@@ -167,7 +181,7 @@ main :: proc() {
 			snippet_map[snippet] = gamemaker_snippets[snippet]
 		}
 
-		exposed_values_path := strings.concatenate({cli_args.path_to_documentation, "/exposed_values.txt"})
+		exposed_values_path := strings.concatenate({cli_args.path_to_documentation, "\\exposed_values.txt"})
 		exposed_value_data, err := os2.read_entire_file_from_path(exposed_values_path, context.allocator)
 
 		if err != os2.ERROR_NONE {
@@ -177,7 +191,7 @@ main :: proc() {
 
 		// We flatten the whole functions directory so its easier to search
 		fn_doc_paths: map[string]string
-		w := os2.walker_create(strings.concatenate({cli_args.path_to_documentation, "/Functions"}))
+		w := os2.walker_create(strings.concatenate({cli_args.path_to_documentation, "\\Functions"}))
 		for fi in os2.walker_walk(&w) {
 			if path, err := os2.walker_error(&w); err != nil {
 				fmt.println("failed walking", path, err)
@@ -189,8 +203,8 @@ main :: proc() {
 			}
 
 			// remove .html from name
-			split_path := strings.split(fi.name, ".")
-			fn_doc_paths[strings.clone(split_path[0])] = strings.clone(fi.fullpath)
+			filename, extension := os2.split_filename(fi.name)
+			fn_doc_paths[strings.clone(filename)] = strings.clone(fi.fullpath)
 		}
 
 		parsing_functions := true
@@ -284,24 +298,25 @@ main :: proc() {
 		}
 
 		snippet_json, marshal_err := json.marshal(snippet_map, {pretty = true})
-		err2 := os2.write_entire_file("./ZSGrammar/snippets/snippets.json", snippet_json[:])
+		err2 := os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\snippets\\snippets.json"}), snippet_json[:])
 		if err2 != os2.ERROR_NONE {
 			fmt.println("Error writing the snippet json to the generated plugin")
+			return
 		}
 
 		if cli_args.verbose {
-			os2.make_directory("./ZSGrammar/__internal")
+			os2.make_directory(strings.concatenate({output_path, "\\ZSGrammar\\__internal"}))
 
 			// Output verbose info
-			_ = os2.write_entire_file("./ZSGrammar/__internal/discarded.txt", transmute([]u8)strings.join(discarded_names[:], "\n"))
-			_ = os2.write_entire_file("./ZSGrammar/__internal/undocumented_functions.txt", transmute([]u8)strings.join(undocumented_functions[:], "\n"))
-			_ = os2.write_entire_file("./ZSGrammar/__internal/functions.txt", transmute([]u8)strings.join(functions[:], "\n"))
-			_ = os2.write_entire_file("./ZSGrammar/__internal/constants.txt", transmute([]u8)strings.join(constants[:], "\n"))
-			_ = os2.write_entire_file("./ZSGrammar/__internal/assets.txt", transmute([]u8)strings.join(assets[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal/discarded.txt"}), transmute([]u8)strings.join(discarded_names[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal\\undocumented_functions.txt"}), transmute([]u8)strings.join(undocumented_functions[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal\\functions.txt"}), transmute([]u8)strings.join(functions[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal\\constants.txt"}), transmute([]u8)strings.join(constants[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal\\assets.txt"}), transmute([]u8)strings.join(assets[:], "\n"))
 		}
 	}
 
-	fmt.println("Plugin successfully generated at ./ZSGrammar just move it (not plugin_skeleton) into your vscode plugins folder and any time you open a .meow or .script file it should load!")
+	fmt.println("Plugin successfully generated at", output_path, "just move it (not plugin_skeleton) into your vscode plugins folder and any time you open a .meow or .script file it should load!")
 
 	free_all(context.allocator)
 }
