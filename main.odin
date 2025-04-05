@@ -10,7 +10,7 @@ import "core:text/scanner"
 
 CLIArguments :: struct {
 	path_to_documentation:  string `args:"pos=0,required" usage:"Path to game modding documentation folder."`,
-	output_path:            string `usage:Changes the directory the plugin is output to (note: Deletes any old ZSGrammar folder in this directory too)`,
+	output_path:            string `usage:Changes the directory the plugin is output to (note: Deletes any old ZSModdingTools folder in this directory too)`,
 
 	disable_snippets:       bool `usage:"Set to disable all snippets (function and asset)"`,
 	disable_asset_snippets: bool `usage:"Set to disable only the asset snippets"`,
@@ -85,7 +85,7 @@ get_function_arguments :: proc(name: string, fn_doc_paths: map[string]string, cl
 				if scanner.peek(s) == ')' {
 					break
 				}
-				else { // We have another argument probably continue parsing
+				else { // We have another argument
 					continue
 				}
 			}
@@ -122,7 +122,7 @@ main :: proc() {
 		}
 	}
 
-	extension_path := strings.concatenate({output_path, "\\ZSGrammar\\"})
+	extension_path := strings.concatenate({output_path, "\\ZSModdingTools\\"})
 
 	// Remove any old generated plugin
 	if os2.exists(extension_path) {
@@ -144,7 +144,7 @@ main :: proc() {
 		}
 
 		cleaned_path, _ := os2.clean_path(fi.fullpath, context.allocator)
-		replaced_path, _ := strings.replace_all(cleaned_path, "plugin_skeleton", "ZSGrammar")
+		replaced_path, _ := strings.replace_all(cleaned_path, "plugin_skeleton", "ZSModdingTools")
 		full_path := strings.concatenate({output_path, "\\", replaced_path})
 
 		if fi.type == .Directory {
@@ -297,21 +297,21 @@ main :: proc() {
 		}
 
 		snippet_json, marshal_err := json.marshal(snippet_map, {pretty = true})
-		err2 := os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\snippets\\snippets.json"}), snippet_json[:])
+		err2 := os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\snippets\\snippets.json"}), snippet_json[:])
 		if err2 != os2.ERROR_NONE {
 			fmt.println("Error writing the snippet json to the generated plugin")
 			return
 		}
 
 		if cli_args.verbose {
-			os2.make_directory(strings.concatenate({output_path, "\\ZSGrammar\\__internal"}))
+			os2.make_directory(strings.concatenate({output_path, "\\ZSModdingTools\\__internal"}))
 
 			// Output verbose info
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal/discarded.txt"}), transmute([]u8)strings.join(discarded_names[:], "\n"))
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal\\undocumented_functions.txt"}), transmute([]u8)strings.join(undocumented_functions[:], "\n"))
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal\\functions.txt"}), transmute([]u8)strings.join(functions[:], "\n"))
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal\\constants.txt"}), transmute([]u8)strings.join(constants[:], "\n"))
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSGrammar\\__internal\\assets.txt"}), transmute([]u8)strings.join(assets[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal/discarded.txt"}), transmute([]u8)strings.join(discarded_names[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal\\undocumented_functions.txt"}), transmute([]u8)strings.join(undocumented_functions[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal\\functions.txt"}), transmute([]u8)strings.join(functions[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal\\constants.txt"}), transmute([]u8)strings.join(constants[:], "\n"))
+			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal\\assets.txt"}), transmute([]u8)strings.join(assets[:], "\n"))
 		}
 	}
 
