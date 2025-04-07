@@ -1,8 +1,9 @@
 {
-  "name": "zsgrammar",
-  "displayName": "ZSGrammar",
-  "description": "Grammar for zero sievert modding",
+  "name": "zsmoddingtools",
+  "displayName": "ZSModdingtools",
+  "description": "Tools for zero sievert modding",
   "version": "0.0.1",
+  "main": "./src/main.js",
   "engines": {
     "vscode": "^1.98.0"
   },
@@ -11,20 +12,44 @@
     "Snippets"
   ],
   "contributes": {
-    "languages": [{
-      "id": "catspeak",
-      "aliases": ["catspeak"],
-      "extensions": [".script", ".meow"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "catspeak",
-      "scopeName": "source.catspeak",
-      "path": "./syntaxes/catspeak.tmLanguage.json"
-    }],
-    "snippets": [{
+    "languages": [
+      {
+        "id": "catspeak",
+        "aliases": [
+          "catspeak"
+        ],
+        "extensions": [
+          ".script",
+          ".meow"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "catspeak",
+        "scopeName": "source.catspeak",
+        "path": "./syntaxes/catspeak.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
         "language": "catspeak",
         "path": "./snippets/snippets.json"
-    }]
+      }
+    ],
+    "commands": [
+      {
+        "command": "zsmoddingtools.generateEmptyMod",
+        "title": "ZSModdingtools: Generate empty mod"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "zsmoddingtools.generateEmptyMod"
+        }
+      ]
+    }
   }
 }

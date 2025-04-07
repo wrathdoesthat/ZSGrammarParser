@@ -74,7 +74,7 @@
 		},
 		"variables": {
 			"patterns": [{
-				"name": "variable.other.catspeak",
+				"name": "variable.catspeak",
 				"match": "(?<=[^.]\\.|:)\\b([A-Za-z_]\\w*)"
 			}]
 		},

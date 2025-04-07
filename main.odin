@@ -52,7 +52,7 @@ get_function_arguments :: proc(name: string, fn_doc_paths: map[string]string, cl
 		return {}
 	}
 
-	scanner_substr := data_as_str[idx + len(name):idx + 1024]
+	scanner_substr := data_as_str[idx + len(name) : idx + 1024]
 
 	s := new(scanner.Scanner)
 	s = scanner.init(s, scanner_substr)
