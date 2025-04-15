@@ -100,7 +100,6 @@ get_function_arguments :: proc(name: string, path: string, cli_args: CLI_Argumen
 	starting_idx := strings.index(data, searching_for)
 
 	if starting_idx == -1 {
-		fmt.println(name, "couldnt find function body")
 		return {}, .Failed_To_Find_Body
 	}
 
@@ -245,7 +244,7 @@ parse_constants_and_macros :: proc(name: string, path: string, snippets: ^map[st
 		
 		final_value := value
 		if strings.index(value, "“") != -1 {
-			if cli_args.verbose do fmt.println(value, "had bad quotes")
+			vb_print(value, "had bad quotes")
 			
 			fixed1, allyd1 := strings.replace_all(value, "“", "\"", context.temp_allocator)
 			fixed2, allyd2 := strings.replace_all(fixed1, "”", "\"", context.temp_allocator)
@@ -370,8 +369,8 @@ main :: proc() {
 			for name in gm_snippets {
 				gm_snippet := gm_snippets[name]
 				snippets[strings.clone(name)] = {
-					strings.clone(gm_snippet.body),
-					strings.clone(gm_snippet.prefix),
+					prefix = strings.clone(gm_snippet.prefix),
+					body = strings.clone(gm_snippet.body),
 				}
 			}
 
