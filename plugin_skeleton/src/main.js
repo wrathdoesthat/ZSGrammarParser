@@ -37,7 +37,7 @@ author=${modAuthor}
 
     fs.writeFileSync(curFolder + "/meta.ini", metaFileTemplate)
     fs.writeFileSync(curFolder + "/init.script", "-- Your code here :)")
-    fs.mkdirSync(curFolder + "/scripts")
+    //fs.mkdirSync(curFolder + "/scripts")
 }
 
 function activate(context) {

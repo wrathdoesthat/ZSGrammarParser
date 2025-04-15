@@ -7,71 +7,117 @@ import "core:fmt"
 import "core:os/os2"
 import "core:strings"
 import "core:text/scanner"
+import "core:slice"
+import "core:mem"
+import "core:unicode/utf8"
+import "core:sys/windows"
+import "core:encoding/xml"
 
-CLIArguments :: struct {
+CLI_Arguments :: struct {
 	path_to_documentation:  string `args:"pos=0,required" usage:"Path to game modding documentation folder."`,
-	output_path:            string `usage:Changes the directory the plugin is output to (note: Deletes any old ZSModdingTools folder in this directory too)`,
+	output_dir:             string `usage:Changes the directory the plugin is output to (note: Deletes any old ZSModdingTools folder in this directory too)`,
 
 	disable_snippets:       bool `usage:"Set to disable all snippets (function and asset)"`,
 	disable_asset_snippets: bool `usage:"Set to disable only the asset snippets"`,
 
 	// Debug only pretty much
-	verbose: bool `usage:"Set to enable extra information output (if snippets are enabled it outputs an __internal folder in the generated plugin with extra info aswell)"`
+	verbose: bool `usage:"Set to enable extra information output (if snippets are enabled it outputs an __internal folder in the generated plugin with extra info aswell)"`,
 }
 
-// These use a different style of table in the documentation but since they have common prefixes
-// just handwriting them and searching exposed values is fine
-constant_prefixes: []string = {
-	"MAP_",
-	"DIALOGUE_TYPE_",
-	"FACTION_REP_"
-}
-
-SnippetDef :: struct {
+Snippet_Def :: struct {
 	prefix: string,
 	body:   string, 
 }
 
-get_function_arguments :: proc(name: string, fn_doc_paths: map[string]string, cli_args: CLIArguments) -> [dynamic]string {
+Argument_Parsing_Error :: enum {
+	None,
+	No_Arguments, // Not always an actual error
+	Not_Documented, 
+	Failed_To_Find_Body, 
+}
+
+// TODO: implement Structs, Input, Drawing, Arrays, Particles snippets 
+ignored_function_paths : []string = {
+	// Handled by gamemaker snippets
+	"Structs", 
+	"Math and Randoms", 
+	"Input", 
+	"Drawing",
+	"Arrays",
+	"Particles",
+}
+
+vb_print :: proc(args: ..any) {
+	if cli_args.verbose do fmt.println(..args)
+}
+
+dir_files_into_map :: proc(path: string, files: ^map[string]string) {
+	fn_walker := os2.walker_create(path)
+
+	for fi in os2.walker_walk(&fn_walker) {
+		if path, err := os2.walker_error(&fn_walker); err != nil {
+			fmt.println("failed walking", path, err)
+			continue
+		}
+
+		is_dir := fi.type == .Directory
+
+		for path in ignored_function_paths {
+			if fi.name == path {
+				if is_dir do os2.walker_skip_dir(&fn_walker)
+				continue
+			}
+		}
+
+		if is_dir {continue}
+
+		// remove .html from name
+		filename, _ := os2.split_filename(fi.name)
+		files[strings.clone(filename)] = strings.clone(fi.fullpath)
+	}
+}
+
+get_function_arguments :: proc(name: string, path: string, cli_args: CLI_Arguments) -> ([dynamic]string, Argument_Parsing_Error) {
 	arguments: [dynamic]string
 
-	doc_path := fn_doc_paths[name]
-	file_data, read_err := os2.read_entire_file_from_path(doc_path, context.temp_allocator)
+	file_data, read_err := os2.read_entire_file_from_path(path, context.allocator)
+	defer delete(file_data)
 	if read_err != os2.ERROR_NONE {
-		fmt.println("Error reading fn doc at path", doc_path)
-		return {}
+		fmt.println("Error reading fn doc at path", path)
+		return {}, .None
 	}
 
-	data_as_str := string(file_data)
+	data := string(file_data)
+	if strings.index(data, "Documentation coming soon.") != -1 {
+		return {}, .Not_Documented
+	}
+
 	searching_for := strings.concatenate({name, "("})
-	idx := strings.index(data_as_str, searching_for)
+	defer delete(searching_for)
 
-	// couldnt find function name in documentation paths
-	if idx == -1 {
-		if cli_args.verbose do fmt.println("Error finding the function body for", name)
-		return {}
+	searching_for_len := len(searching_for)
+
+	starting_idx := strings.index(data, searching_for)
+
+	if starting_idx == -1 {
+		fmt.println(name, "couldnt find function body")
+		return {}, .Failed_To_Find_Body
 	}
 
-	scanner_substr := data_as_str[idx + len(name) : idx + 1024]
+	scanner_substr := data[starting_idx : starting_idx + 256]
 
 	s := new(scanner.Scanner)
+	defer free(s)
+
 	s = scanner.init(s, scanner_substr)
 
-	// skip (
-	scanner.scan(s)
+	for {
+		scanned := scanner.scan(s)
 
-	// Function has arguments because next character isnt closing bracket
-	if (scanner.peek(s) != ')') {
-		for {
-			scanned := scanner.scan(s)
-
-			// We have a default argument in the documentation
-			// Maybe these could be used later somehow but for now we discard
-			if scanner.peek(s) == '=' {
+		if scanned == scanner.Ident {
+			if scanner.peek_token(s) == '=' {
 				append(&arguments, strings.clone(scanner.token_text(s)))
-
-				// Skip = part of default arguments
-				scanner.scan(s)
+				scanner.scan(s) // Skip =
 
 				// If default argument was an array scan until the end
 				if scanner.peek(s) == '[' {
@@ -81,241 +127,325 @@ get_function_arguments :: proc(name: string, fn_doc_paths: map[string]string, cl
 					scanner.scan(s)
 				}
 
-				// The default part was the last part of our arguments just leave
-				if scanner.peek(s) == ')' {
-					break
-				}
-				else { // We have another argument
-					continue
-				}
+				continue
 			}
 
-			// parsed a full argument
-			if scanner.peek(s) == ',' {
+			if scanner.peek_token(s) == ',' {
 				append(&arguments, strings.clone(scanner.token_text(s)))
 				continue
 			}
 
-			// Reached the end of arguments
-			if scanner.peek(s) == ')' {
+			if scanner.peek_token(s) == ')' {
 				append(&arguments, strings.clone(scanner.token_text(s)))
 				break
 			}
 		}
+
+		if scanned == ')' {break}
 	}
 
-	return arguments
+	if len(arguments) == 0 {
+		return {}, .No_Arguments
+	} else {
+		return arguments, .None
+	}
 }
 
-main :: proc() {
-	context.allocator = context.temp_allocator
+build_function_snippet :: proc(name: string, snippets: ^map[string]Snippet_Def, arguments: [dynamic]string) {
+	argbuf: [1024]byte
+	argbuilder := strings.builder_from_bytes(argbuf[:])
 
-	cli_args: CLIArguments
-	flags.parse_or_exit(&cli_args, os2.args)
+	// Both builds the arguments and frees them
+	for arg, i in arguments {
+		strings.write_string(&argbuilder, "${")
+		strings.write_int(&argbuilder, i + 1)
+		strings.write_string(&argbuilder, ":")
+		strings.write_string(&argbuilder, arg)
 
-	output_path := ".\\"
-	if len(cli_args.output_path) > 0 {
-		output_path, _ = os2.clean_path(cli_args.output_path, context.allocator)	
-		if !os2.exists(cli_args.output_path) {
-			fmt.println("Output path doesnt exist", cli_args.output_path)
-			return
+		if i == len(arguments) - 1 {
+			strings.write_string(&argbuilder, "}")
+		} else {
+			strings.write_string(&argbuilder, "}, ")
+		}
+
+		delete(arg)
+	}
+
+	arguments_string := strings.concatenate({"(", strings.to_string(argbuilder), ")"})
+
+	snippets[strings.clone(name)] = Snippet_Def {
+		prefix = strings.concatenate({name, "()"}),
+		body   = strings.concatenate({name, arguments_string})
+	} 
+
+	delete(arguments_string)
+}
+
+parse_function :: proc(name: string, path: string, snippets: ^map[string]Snippet_Def) {
+	arguments, parse_err := get_function_arguments(name, path, cli_args)
+	#partial switch parse_err {
+		case .Not_Documented: {
+			vb_print("undocumented:", name)
+		}
+		case .Failed_To_Find_Body: {
+			vb_print("failed to find body for:", name)
+		}
+		case .No_Arguments: {
+			vb_print("no arguments:", name)
 		}
 	}
 
-	extension_path := strings.concatenate({output_path, "\\ZSModdingTools\\"})
-
-	// Remove any old generated plugin
-	if os2.exists(extension_path) {
-		os2.remove_all(extension_path)
-	}
-
-	// copy over our skeleton plugin
-	plugin_dir_create_err := os2.make_directory(extension_path)
-	if plugin_dir_create_err != os2.ERROR_NONE {
-		fmt.println("Error creating", extension_path, plugin_dir_create_err)
+	// Function had no arguments so we just write an empty body
+	if len(arguments) == 0 {
+		snippets[strings.clone(name)] = Snippet_Def {
+			prefix = strings.concatenate({name, "()"}),
+			body   = strings.concatenate({name, "()"})
+		}
 		return
 	}
 
-	w := os2.walker_create(".\\plugin_skeleton")
-	for fi in os2.walker_walk(&w) {
-		if path, err := os2.walker_error(&w); err != nil {
-			fmt.eprintfln("failed walking %s: %s", path, err)
-			continue
-		}
+	build_function_snippet(name, snippets, arguments)	
+	delete(arguments)
+}
 
-		cleaned_path, _ := os2.clean_path(fi.fullpath, context.allocator)
-		replaced_path, _ := strings.replace_all(cleaned_path, "plugin_skeleton", "ZSModdingTools")
-		full_path := strings.concatenate({output_path, "\\", replaced_path})
-
-		if fi.type == .Directory {
-			os2.make_directory(full_path)
-		} else {
-			os2.copy_file(full_path, fi.fullpath)
-		} 
+parse_constants_and_macros :: proc(name: string, path: string, snippets: ^map[string]Snippet_Def) {
+	file_data, read_err := os2.read_entire_file_from_path(path, context.allocator)
+	defer delete(file_data)
+	if read_err != os2.ERROR_NONE {
+		fmt.println("Error reading fn doc at path", path)
+		return
 	}
 
-	assets          : [dynamic]string
-	functions       : [dynamic]string
-	constants       : [dynamic]string
-	discarded_names : [dynamic]string
-
-	if !cli_args.disable_snippets {
-		snippet_map: map[string]SnippetDef
-
-        gamemaker_snippets : map[string]SnippetDef
-		gamemaker_snippet_data, read_err := os2.read_entire_file_from_path(".\\builtin_snippets\\gamemaker.jsonc", context.allocator)
+	data := string(file_data)
 	
-		if read_err != os2.ERROR_NONE {
-			fmt.println("Error opening .\\builtin_snippets\\gamemaker.jsonc", read_err)
+	// the table html is valid xml as well :)
+	table_begin := strings.index(data, "<tbody>")
+	table_end := strings.index(data, "</tbody>") + len("</tbody>")
+	
+	original_table := data[table_begin : table_end]
+	
+	// Some use a break tag this breaks the parsing
+	cleaned_table1, _ := strings.remove_all(original_table, "<br>", context.temp_allocator)
+
+	// some use strong tags this complicates the parsing so i just remove it
+	cleaned_table2, _ := strings.remove_all(cleaned_table1, "<strong>", context.temp_allocator)
+	table, _ := strings.remove_all(cleaned_table2, "</strong>", context.temp_allocator)
+
+	//fmt.println(table)
+
+	doc, err := xml.parse(table)
+
+    idx := 0
+    for {
+        item, found := xml.find_child_by_ident(doc, 0, "tr", idx)
+        if !found {break}
+
+        child, found2 := xml.find_child_by_ident(doc, item, "td")
+		value := doc.elements[child].value[0].(string)
+		
+		final_value := value
+		if strings.index(value, "“") != -1 {
+			if cli_args.verbose do fmt.println(value, "had bad quotes")
+			
+			fixed1, allyd1 := strings.replace_all(value, "“", "\"", context.temp_allocator)
+			fixed2, allyd2 := strings.replace_all(fixed1, "”", "\"", context.temp_allocator)
+
+			final_value = fixed2
+		}
+
+		unquoted_name, allyd := strings.remove_all(final_value, "\"")
+		defer if allyd do delete(unquoted_name)
+
+		if unquoted_name not_in snippets {
+			snippets[strings.clone(unquoted_name)] = Snippet_Def {
+				prefix = strings.clone(final_value),
+				body   = strings.clone(final_value),
+			}
+		}
+
+        idx += 1
+    }
+
+	xml.destroy(doc)
+	free_all(context.temp_allocator)
+}
+
+cli_args : CLI_Arguments
+
+main :: proc() {
+	when ODIN_DEBUG {
+		track: mem.Tracking_Allocator
+		mem.tracking_allocator_init(&track, context.allocator)
+		context.allocator = mem.tracking_allocator(&track)
+
+		defer {
+			if len(track.allocation_map) > 0 {
+				fmt.println(len(track.allocation_map), "allocations not freed")
+				for _, entry in track.allocation_map {
+					fmt.println(entry.size, "bytes at", entry.location)
+				}
+			}
+
+			mem.tracking_allocator_destroy(&track)
+		}
+	}
+
+	flags.parse_or_exit(&cli_args, os2.args)
+
+	extension_path := strings.clone(".\\ZSModdingTools")
+	if len(cli_args.output_dir) > 0 {
+		delete(extension_path)
+
+		cleaned_path, _ := os2.clean_path(cli_args.output_dir, context.allocator)	
+		if !os2.exists(cleaned_path) {
+			fmt.println("Output path doesnt exist", cleaned_path)
 			return
 		}
+
+		extension_path = strings.concatenate({cleaned_path, "\\ZSModdingTools"})
+		delete(cleaned_path)
+	}
+
+	defer delete(extension_path)
 	
-		unmarshal_err := json.unmarshal(gamemaker_snippet_data, &gamemaker_snippets, .JSON5)
-		if unmarshal_err != nil {
-			fmt.println("Error loading .\\builtin_snippets\\gamemaker.jsonc", unmarshal_err)
+	// Remove any old generated plugin
+	if os2.exists(extension_path) {
+		conv_str := windows.utf8_to_wstring(extension_path, context.allocator)
+		op_struct := windows.SHFILEOPSTRUCTW{
+			hwnd = nil,
+			wFunc = windows.FO_DELETE,
+			fFlags = windows.FOF_ALLOWUNDO | windows.FOF_NO_UI,
+			pFrom = conv_str
+		}
+		windows.SHFileOperationW(&op_struct)
+		free(conv_str)
+	}
+
+	// copy over our skeleton plugin
+	{
+		plugin_dir_create_err := os2.make_directory(extension_path)
+		if plugin_dir_create_err != os2.ERROR_NONE {
+			fmt.println("Error creating", extension_path, plugin_dir_create_err)
 			return
 		}
-	
-		for snippet in gamemaker_snippets {
-			snippet_map[snippet] = gamemaker_snippets[snippet]
-		}
 
-		exposed_values_path := strings.concatenate({cli_args.path_to_documentation, "\\exposed_values.txt"})
-		exposed_value_data, err := os2.read_entire_file_from_path(exposed_values_path, context.allocator)
-
-		if err != os2.ERROR_NONE {
-			fmt.println("Error reading", exposed_values_path, "wrong documentation path or its missing?")
-			return
-		}
-
-		// We flatten the whole functions directory so its easier to search
-		fn_doc_paths: map[string]string
-		w := os2.walker_create(strings.concatenate({cli_args.path_to_documentation, "\\Functions"}))
-		for fi in os2.walker_walk(&w) {
-			if path, err := os2.walker_error(&w); err != nil {
+		fmt.println("Writing extension to", extension_path)
+		skeleton_walker := os2.walker_create(".\\plugin_skeleton")
+		for fi in os2.walker_walk(&skeleton_walker) {
+			if path, err := os2.walker_error(&skeleton_walker); err != nil {
 				fmt.println("failed walking", path, err)
 				continue
 			}
 
+			non_rel_path, _ := strings.remove(fi.fullpath, ".\\plugin_skeleton", 1, context.temp_allocator)
+			full_path := strings.concatenate({extension_path, non_rel_path}, context.temp_allocator)
+
 			if fi.type == .Directory {
-				continue
-			}
-
-			// remove .html from name
-			filename, extension := os2.split_filename(fi.name)
-			fn_doc_paths[strings.clone(filename)] = strings.clone(fi.fullpath)
-		}
-
-		parsing_functions := true
-		undocumented_functions : [dynamic]string
-
-		data_string := string(exposed_value_data)
-		for name in strings.split_lines_iterator(&data_string) {
-			// Seems like functions and prefixed constants only appear before this
-			if strings.index(name, "YYInternalObject") != -1 {
-				parsing_functions = false
-				if cli_args.verbose do append(&discarded_names, name)
-				continue
-			}
-
-			// there are some names like object23432 sprite443 not sure what they are but discard
-			if strings.starts_with(name, "Sprite2058") || strings.starts_with(name, "object") || strings.starts_with(name, "sprite") {
-				if cli_args.verbose do append(&discarded_names, name)
-				continue
-			}
-
-			if parsing_functions {
-				// Prefixed constants are above the internal object with the functions
-				was_constant := false
-				for prefix in constant_prefixes {
-					if strings.starts_with(name, prefix) {
-						snippet_map[name] = SnippetDef {
-							prefix = name,
-							body   = strings.clone(name),
-						}
-						was_constant = true
-
-						append(&constants, name)
-						break
-					}
-				}
-				if was_constant {continue}
-
-				// Cant be a function likely an "asset" or enum this shouldnt really be hit because of the constants check unless they add new ones
-				if strings.index(name, "_") != -1 {
-					if cli_args.verbose do append(&discarded_names, name)
-					continue
-				}
-
-				// Was likely pre filled
-				if name in snippet_map {
-					//if cli_args.verbose do fmt.println(name, "was already in snippet map")
-					continue
-				}
-
-				arguments : [dynamic]string
-
-				if name in fn_doc_paths {
-					arguments = get_function_arguments(name, fn_doc_paths, cli_args)
-				}
-				else {
-					append(&undocumented_functions, name)
-				}
-
-				argbuf: [1024]byte
-				argbuilder := strings.builder_from_bytes(argbuf[:])
-			
-				for arg, i in arguments {
-					strings.write_string(&argbuilder, "${")
-					strings.write_int(&argbuilder, i + 1)
-					strings.write_string(&argbuilder, ":")
-					strings.write_string(&argbuilder, arg)
-			
-					if i == len(arguments) - 1 {
-						strings.write_string(&argbuilder, "}")
-					} else {
-						strings.write_string(&argbuilder, "}, ")
-					}
-				}
-			
-				arguments_string := strings.concatenate({"(", strings.to_string(argbuilder), ")"})
-			
-				snippet_map[name] = SnippetDef {
-					prefix = strings.concatenate({name, "()"}),
-					body   = strings.concatenate({name, arguments_string})
-				}
-				append(&functions, name)
+				os2.make_directory(full_path)
 			} else {
-				// Asset snippets break if disabled
-				if cli_args.disable_asset_snippets {break} 
-				snippet_map[name] = SnippetDef {
-					prefix = name,
-					body   = strings.concatenate({"\"", name, "\""})
-				}
-				append(&assets, name)
-			}
+				os2.copy_file(full_path, fi.fullpath)
+			} 
 		}
 
-		snippet_json, marshal_err := json.marshal(snippet_map, {pretty = true})
-		err2 := os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\snippets\\snippets.json"}), snippet_json[:])
-		if err2 != os2.ERROR_NONE {
-			fmt.println("Error writing the snippet json to the generated plugin")
-			return
-		}
-
-		if cli_args.verbose {
-			os2.make_directory(strings.concatenate({output_path, "\\ZSModdingTools\\__internal"}))
-
-			// Output verbose info
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal/discarded.txt"}), transmute([]u8)strings.join(discarded_names[:], "\n"))
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal\\undocumented_functions.txt"}), transmute([]u8)strings.join(undocumented_functions[:], "\n"))
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal\\functions.txt"}), transmute([]u8)strings.join(functions[:], "\n"))
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal\\constants.txt"}), transmute([]u8)strings.join(constants[:], "\n"))
-			_ = os2.write_entire_file(strings.concatenate({output_path, "\\ZSModdingTools\\__internal\\assets.txt"}), transmute([]u8)strings.join(assets[:], "\n"))
-		}
+		free_all(context.temp_allocator)
 	}
 
-	fmt.println("Plugin successfully generated at", output_path, "just move it (not plugin_skeleton) into your vscode plugins folder and any time you open a .meow or .script file it should load!")
+	if !cli_args.disable_snippets {
+		snippets : map[string]Snippet_Def
 
-	free_all(context.allocator)
+		// Gamemaker snippets we hand did
+		{
+			gm_snippets : map[string]Snippet_Def
+			gm_snippet_data, read_err := os2.read_entire_file_from_path(".\\builtin_snippets\\gamemaker.jsonc", context.temp_allocator)
+			if read_err != os2.ERROR_NONE {
+				fmt.println("Error opening .\\builtin_snippets\\gamemaker.jsonc", read_err)
+				return
+			}
+		
+			if err := json.unmarshal(gm_snippet_data, &gm_snippets, allocator = context.temp_allocator); err != nil {
+				fmt.println("Error loading .\\builtin_snippets\\gamemaker.jsonc", err)
+				return
+			}
+
+			for name in gm_snippets {
+				gm_snippet := gm_snippets[name]
+				snippets[strings.clone(name)] = {
+					strings.clone(gm_snippet.body),
+					strings.clone(gm_snippet.prefix),
+				}
+			}
+
+			delete(gm_snippets)
+			free_all(context.temp_allocator)
+		}
+
+		// Documentation functions
+		fn_doc_paths: map[string]string
+		fns_path := strings.concatenate({cli_args.path_to_documentation, "\\Functions"})
+		dir_files_into_map(fns_path, &fn_doc_paths)
+		delete(fns_path)
+
+		defer {
+			for k in fn_doc_paths {
+				delete(fn_doc_paths[k])
+				delete(k)
+			}
+			delete(fn_doc_paths)
+		}
+
+		// Parse functions
+		for name in fn_doc_paths {
+			path := fn_doc_paths[name]
+			parse_function(name, path, &snippets)
+		}
+
+		// Documentation macros and constants
+		if !cli_args.disable_asset_snippets {
+			macro_doc_paths: map[string]string
+			macros_path := strings.concatenate({cli_args.path_to_documentation, "\\Constants and Macros"})
+			dir_files_into_map(macros_path, &macro_doc_paths)
+			delete(macros_path)
+
+			defer {
+				for k in macro_doc_paths {
+					delete(macro_doc_paths[k])
+					delete(k)
+				}
+				delete(macro_doc_paths)
+			}
+
+			for name in macro_doc_paths {
+				path := macro_doc_paths[name]
+
+				// TODO this one has multiple tables ill have to figure this out
+				if name == "Pre-Existing Objects" {continue}
+
+				parse_constants_and_macros(name, path, &snippets)
+			}
+		}
+
+		snippet_json, marshal_err := json.marshal(snippets, {pretty = true}, context.temp_allocator)
+		snippet_path := strings.concatenate({extension_path, "\\snippets\\snippets.json"}, context.temp_allocator)
+		err := os2.write_entire_file(snippet_path, snippet_json[:])
+		if err != os2.ERROR_NONE {
+			fmt.println("Error writing the snippet json to the generated plugin", err)
+			return
+		}
+		free_all(context.temp_allocator)
+
+		for k in snippets {
+			snippet := snippets[k]
+			delete(snippet.body)
+			delete(snippet.prefix)
+			delete(k)
+		}
+
+		delete(snippets)
+	}
+	
+	if len(cli_args.output_dir) == 0 {
+		fmt.println("Plugin successfully generated at", extension_path, "just move it (not plugin_skeleton) into your vscode plugins folder and any time you open a .meow or .script file it should load!")
+	} else {
+		fmt.println("Plugin successfully generated at", extension_path, "any time you open a .meow or .script file it should load!")
+	}
 }

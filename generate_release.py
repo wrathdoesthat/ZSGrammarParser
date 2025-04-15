@@ -29,9 +29,9 @@ def main():
     for output in outputs:
         subprocess_args = ["./ZSGrammarParser.exe", documentation_path] + outputs[output]
         subprocess.run(subprocess_args)
-        shutil.make_archive("./Release/" + output, "zip", "./ZSGrammar")
+        shutil.make_archive("./Release/ZSModdingTools-" + output, "zip", "./ZSModdingTools")
     
-    shutil.rmtree("./ZSGrammar")
+    shutil.rmtree("./ZSModdingTools")
         
 if __name__ == "__main__":
     main()
