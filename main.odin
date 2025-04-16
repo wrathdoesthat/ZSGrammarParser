@@ -36,7 +36,6 @@ Argument_Parsing_Error :: enum {
 	Failed_To_Find_Body, 
 }
 
-// TODO: implement Structs, Input, Drawing, Arrays, Particles snippets 
 ignored_function_paths : []string = {
 	// Handled by gamemaker snippets
 	"Structs", 

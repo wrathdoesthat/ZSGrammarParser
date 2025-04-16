@@ -188,5 +188,288 @@
     "AngleDifference": {
         "prefix": "AngleDifference()",
         "body": "AngleDifference(${1:dest}, ${2:src})"
+    },
+    
+    // Arrays
+    "ArrayLength": {
+        "prefix": "ArrayLength()",
+        "body": "ArrayLength(${1:array})"
+    },
+    "ArrayContains": {
+        "prefix": "ArrayContains()",
+        "body": "ArrayContains(${1:array}, ${2:value}, ${3:optional_offset}, ${4:optional_length})"
+    },
+    "ArrayPush": {
+        "prefix": "ArrayPush()",
+        "body": "ArrayPush(${1:array}, ${2:value})"
+    },
+    "ArrayDelete": {
+        "prefix": "ArrayDelete()",
+        "body": "ArrayDelete(${1:array}, ${2:index}, ${3:number})"
+    },
+    "ArrayFirst": {
+        "prefix": "ArrayFirst()",
+        "body": "ArrayFirst(${1:array})"
+    },
+    "ArrayLast": {
+        "prefix": "ArrayLast()",
+        "body": "ArrayLast(${1:array})"
+    },
+    "ArrayResize": {
+        "prefix": "ArrayPush()",
+        "body": "ArrayPush(${1:array}, ${2:new_size})"
+    },
+
+    // Drawing
+    "DrawSelf": {
+        "prefix": "DrawSelf()",
+        "body": "DrawSelf()"
+    },
+    "DrawSprite": {
+        "prefix": "DrawSprite()",
+        "body": "DrawSprite(${1:sprite}, ${2:subimg}, ${3:x}, ${4:y})"
+    },
+    "DrawSpriteExt": {
+        "prefix": "DrawSpriteExt()",
+        "body": "DrawSpriteExt(${1:sprite}, ${2:subimg}, ${3:x}, ${4:y}, ${5:xscale}, ${6:yscale}, ${7:rot}, ${8:color}, ${9:alpha})"
+    },
+    "DrawSpriteStretched": {
+        "prefix": "DrawSpriteStretched()",
+        "body": "DrawSpriteStretched(${1:sprite}, ${2:subimg}, ${3:x}, ${4:y}, ${5:width}, ${6:height})"
+    },
+    "DrawSpriteStretchedExt": {
+        "prefix": "DrawSpriteStretchedExt()",
+        "body": "DrawSpriteStretchedExt(${1:sprite}, ${2:subimg}, ${3:x}, ${4:y}, ${5:width}, ${6:height}, ${7:color}, ${8:alpha})"
+    },
+    "DrawSpritePart": {
+        "prefix": "DrawSpritePart()",
+        "body": "DrawSpritePart(${1:sprite}, ${2:subimg}, ${3:left}, ${4:top}, ${5:width}, ${6:height}, ${7:x}, ${8:y})"
+    },
+    "DrawSpritePartExt": {
+        "prefix": "DrawSpritePartExt()",
+        "body": "DrawSpritePartExt(${1:sprite}, ${2:subimg}, ${3:left}, ${4:top}, ${5:width}, ${6:height}, ${7:x}, ${8:y}, ${9:xscale}, ${10:yscale}, ${11:color}, ${12:alpha})"
+    },
+    "DrawSpritePos": {
+        "prefix": "DrawSpritePos()",
+        "body": "DrawSpritePos(${1:sprite}, ${2:subimg}, ${3:x1}, ${4:y1}, ${5:x2}, ${6:y2}, ${7:x3}, ${8:y3}, ${9:x4}, ${10:y4}, ${11:alpha})"
+    },
+    "DrawSpriteGeneral": {
+        "prefix": "DrawSpriteGeneral()",
+        "body": "DrawSpriteGeneral(${1:sprite}, ${2:subimg}, ${3:left}, ${4:top}, ${5:width}, ${6:height}, ${7:x}, ${8:y}, ${9:xscale}, ${10:yscale}, ${11:rot}, ${12:c1}, ${13:c2}, ${14:c3}, ${15:c4}, ${16:alpha})"
+    },
+    "DrawSpriteTiled": {
+        "prefix": "DrawSpriteTiled()",
+        "body": "DrawSpriteTiled(${1:sprite}, ${2:subimg}, ${3:x}, ${4:y})"
+    },
+    "DrawSpriteTiledExt": {
+        "prefix": "DrawSpriteTiledExt()",
+        "body": "DrawSpriteTiledExt(${1:sprite}, ${2:subimg}, ${3:x}, ${4:y}, ${5:xscale}, ${6:yscale}, ${7:color}, ${8:alpha})"
+    },
+    
+    // Input
+    "KeyboardCheck": {
+        "prefix": "KeyboardCheck()",
+        "body": "KeyboardCheck(${1:key})"
+    },
+    "KeyboardCheckPressed": {
+        "prefix": "KeyboardCheckPressed()",
+        "body": "KeyboardCheckPressed(${1:key})"
+    },
+    "KeyboardCheckReleased": {
+        "prefix": "KeyboardCheckReleased()",
+        "body": "KeyboardCheckReleased(${1:key})"
+    },
+    "MouseCheckButton": {
+        "prefix": "MouseCheckButton()",
+        "body": "MouseCheckButton(${1:button})"
+    },
+    "MouseCheckButtonPressed": {
+        "prefix": "MouseCheckButtonPressed()",
+        "body": "MouseCheckButtonPressed(${1:button})"
+    },
+    "MouseCheckButtonReleased": {
+        "prefix": "MouseCheckButtonReleased()",
+        "body": "MouseCheckButtonReleased(${1:button})"
+    },
+    "Ord": {
+        "prefix": "Ord()",
+        "body": "Ord(${1:string})"
+    },
+
+    // Particles (aka pain and suffering)
+    "ParticleSystemCreate": {
+        "prefix": "ParticleSystemCreate()",
+        "body": "ParticleSystemCreate(${1:particle_system})"
+    },
+    "ParticleSystemDestroy": {
+        "prefix": "ParticleSystemDestroy()",
+        "body": "ParticleSystemDestroy(${1:index})"
+    },
+    "ParticleSystemClear": {
+        "prefix": "ParticleSystemClear()",
+        "body": "ParticleSystemClear(${1:index})"
+    },
+    "ParticleSystemDepth": {
+        "prefix": "ParticleSystemDepth()",
+        "body": "ParticleSystemDepth(${1:index}, ${2:depth})"
+    },
+    "ParticleSystemPosition": {
+        "prefix": "ParticleSystemPosition()",
+        "body": "ParticleSystemPosition(${1:index}, ${2:x}, ${3:y})"
+    },
+    "ParticleSystemUpdate": {
+        "prefix": "ParticleSystemUpdate()",
+        "body": "ParticleSystemUpdate(${1:index})"
+    },
+    "ParticleSystemExists": {
+        "prefix": "ParticleSystemExists()",
+        "body": "ParticleSystemExists(${1:index})"
+    },
+    "ParticleSystemCount": {
+        "prefix": "ParticleSystemCount()",
+        "body": "ParticleSystemCount(${1:index})"
+    },
+    "ParticleTypeCreate": {
+        "prefix": "ParticleTypeCreate()",
+        "body": "ParticleTypeCreate()"
+    },
+    "ParticleTypeDestroy": {
+        "prefix": "ParticleTypeCreate()",
+        "body": "ParticleTypeCreate(${1:index})"
+    },
+    "ParticleTypeClear": {
+        "prefix": "ParticleTypeClear()",
+        "body": "ParticleTypeClear(${1:index})"
+    },
+    "ParticleTypeStep": {
+        "prefix": "ParticleTypeStep()",
+        "body": "ParticleTypeStep(${1:index}, ${2:step_number}, ${3:step_type})"
+    },
+    "ParticleTypeDeath": {
+        "prefix": "ParticleTypeDeath()",
+        "body": "ParticleTypeDeath(${1:index}, ${2:death_number}, ${3:death_type})"
+    },
+    "ParticleTypeExists": {
+        "prefix": "ParticleTypeExists()",
+        "body": "ParticleTypeExists(${1:index})"
+    },
+    "ParticleTypeBlend": {
+        "prefix": "ParticleTypeBlend()",
+        "body": "ParticleTypeBlend(${1:index}, ${2:additive})"
+    },
+    "ParticleTypeSpeed": {
+        "prefix": "ParticleTypeSpeed()",
+        "body": "ParticleTypeSpeed(${1:index}, ${2:speed_min}, ${3:speed_max}, ${4:speed_increase}, ${5:speed_wiggle})"
+    },
+    "ParticleTypeAlpha1": {
+        "prefix": "ParticleTypeAlpha1()",
+        "body": "ParticleTypeAlpha1(${1:index}, ${2:alpha1})"
+    },
+    "ParticleTypeAlpha2": {
+        "prefix": "ParticleTypeAlpha2()",
+        "body": "ParticleTypeAlpha2(${1:index}, ${2:alpha1}, ${3:alpha2})"
+    },
+    "ParticleTypeAlpha3": {
+        "prefix": "ParticleTypeAlpha3()",
+        "body": "ParticleTypeAlpha3(${1:index}, ${2:alpha1}, ${3:alpha2}, ${4:alpha3})"
+    },
+    "ParticleTypeColor1": {
+        "prefix": "ParticleTypeColor1()",
+        "body": "ParticleTypeColor1(${1:index}, ${2:color1})"
+    },
+    "ParticleTypeColor2": {
+        "prefix": "ParticleTypeColor2()",
+        "body": "ParticleTypeColor2(${1:index}, ${2:color1}, ${3:color2})"
+    },
+    "ParticleTypeColor3": {
+        "prefix": "ParticleTypeColor3()",
+        "body": "ParticleTypeColor3(${1:index}, ${2:color1}, ${3:color2}, ${4:color3})"
+    },
+    "ParticleTypeLife": {
+        "prefix": "ParticleTypeLife()",
+        "body": "ParticleTypeLife(${1:index}, ${2:life_min}, ${3:life_max})"
+    },
+    "ParticleTypeOrientation": {
+        "prefix": "ParticleTypeLife()",
+        "body": "ParticleTypeLife(${1:index}, ${2:angle_min}, ${3:angle_max}, ${4:angle_increment}, ${5:angle_wiggle}, ${6:angle_relative})"
+    },
+    "ParticleTypeDirection": {
+        "prefix": "ParticleTypeDirection()",
+        "body": "ParticleTypeDirection(${1:index}, ${2:direction_min}, ${3:direction_max}, ${4:direction_increment}, ${5:direction_wiggle}, ${6:direction_relative})"
+    },
+    "ParticleTypeScale": {
+        "prefix": "ParticleTypeScale()",
+        "body": "ParticleTypeScale(${1:index}, ${2:xscale}, ${3:yscale})"
+    },
+    "ParticleTypeSize": {
+        "prefix": "ParticleTypeSize()",
+        "body": "ParticleTypeSize(${1:index}, ${2:size_min}, ${3:size_max}, ${4:size_increment}, ${5:size_wiggle})"
+    },
+    "ParticleTypeGravity": {
+        "prefix": "ParticleTypeGravity()",
+        "body": "ParticleTypeGravity(${1:index}, ${2:gravity_amount}, ${3:gravity_direction})"
+    },
+    "ParticleTypeSprite": {
+        "prefix": "ParticleTypeSprite()",
+        "body": "ParticleTypeSprite(${1:index}, ${2:sprite}, ${3:animate}, ${4:stretch}, ${5:random})"
+    },
+    "ParticleTypeShape": {
+        "prefix": "ParticleTypeShape()",
+        "body": "ParticleTypeShape(${1:index}, ${2:shape})"
+    },
+    "ParticleEmitterCreate": {
+        "prefix": "ParticleEmitterCreate()",
+        "body": "ParticleEmitterCreate(${1:particle_system})"
+    },
+    "ParticleEmitterDestroy": {
+        "prefix": "ParticleEmitterDestroy()",
+        "body": "ParticleEmitterDestroy(${1:particle_system}, ${2:index})"
+    },
+    "ParticleEmitterDestroyAll": {
+        "prefix": "ParticleEmitterDestroyAll()",
+        "body": "ParticleEmitterDestroyAll(${1:particle_system})"
+    },
+    "ParticleEmitterExists": {
+        "prefix": "ParticleEmitterExists()",
+        "body": "ParticleEmitterExists(${1:particle_system}, ${2:index})"
+    },
+    "ParticleEmitterBurst": {
+        "prefix": "ParticleEmitterBurst()",
+        "body": "ParticleEmitterBurst(${1:particle_system}, ${2:index}, ${3:particle_type}, ${4:number})"
+    },
+    "ParticleEmitterClear": {
+        "prefix": "ParticleEmitterClear()",
+        "body": "ParticleEmitterClear(${1:particle_system}, ${2:index})"
+    },
+    "ParticleEmitterRegion": {
+        "prefix": "ParticleEmitterRegion()",
+        "body": "ParticleEmitterRegion(${1:particle_system}, ${2:index}, ${3:xmin}, ${4:xmax}, ${5:ymin}, ${6:ymax}, ${7:shape}, ${8:distribution})"
+    },
+    "ParticleEmitterStream": {
+        "prefix": "ParticleEmitterStream()",
+        "body": "ParticleEmitterStream(${1:particle_system}, ${2:index}, ${3:particle_type}, ${4:number})"
+    },
+    // TODO: get the real name used for part_particles_create
+
+    // Structs
+    "StructExists": {
+        "prefix": "StructExists()",
+        "body": "StructExists(${1:struct}, ${2:name})"
+    },
+    "StructRemove": {
+        "prefix": "StructRemove()",
+        "body": "StructRemove(${1:struct}, ${2:name})"
+    },
+    "StructGetNames": {
+        "prefix": "StructGetNames()",
+        "body": "StructGetNames(${1:struct})"
+    },
+    "StructGet": {
+        "prefix": "StructGet()",
+        "body": "StructGet(${1:struct}, ${2:name})"
+    },
+    "StructSet": {
+        "prefix": "StructSet()",
+        "body": "StructSet(${1:struct}, ${2:name}, ${3:val})"
     }
 }

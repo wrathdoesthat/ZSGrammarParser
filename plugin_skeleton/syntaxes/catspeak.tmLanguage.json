@@ -86,7 +86,7 @@
 		},
 		"functioncalls": {
 			"patterns": [{
-				"name": "meta.function-call.catspeak",
+				"name": "entity.name.function.catspeak",
 				"match": "\\b\\w+(?=\\()"
 			}]
 		}
