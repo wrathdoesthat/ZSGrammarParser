@@ -22,6 +22,10 @@
           ".script",
           ".meow"
         ],
+        "icon": {
+          "light": "./icons/ZeroSievert.png",
+          "dark": "./icons/ZeroSievert.png"
+        },
         "configuration": "./language-configuration.json"
       }
     ],

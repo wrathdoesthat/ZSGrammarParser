@@ -7,9 +7,6 @@ import "core:fmt"
 import "core:os/os2"
 import "core:strings"
 import "core:text/scanner"
-import "core:slice"
-import "core:mem"
-import "core:unicode/utf8"
 import "core:sys/windows"
 import "core:encoding/xml"
 
@@ -20,8 +17,8 @@ CLI_Arguments :: struct {
 	disable_snippets:       bool `usage:"Set to disable all snippets (function and asset)"`,
 	disable_asset_snippets: bool `usage:"Set to disable only the asset snippets"`,
 
-	// Debug only pretty much
-	verbose: bool `usage:"Set to enable extra information output (if snippets are enabled it outputs an __internal folder in the generated plugin with extra info aswell)"`,
+	// Debug only
+	verbose: bool `usage:"Set to enable extra information output (for debugging)"`,
 }
 
 Snippet_Def :: struct {
@@ -54,15 +51,15 @@ dir_files_into_map :: proc(path: string, files: ^map[string]string) {
 	fn_walker := os2.walker_create(path)
 
 	for fi in os2.walker_walk(&fn_walker) {
-		if path, err := os2.walker_error(&fn_walker); err != nil {
-			fmt.println("failed walking", path, err)
+		if walked_path, err := os2.walker_error(&fn_walker); err != nil {
+			fmt.println("failed walking", walked_path, err)
 			continue
 		}
 
 		is_dir := fi.type == .Directory
 
-		for path in ignored_function_paths {
-			if fi.name == path {
+		for walked_path in ignored_function_paths {
+			if fi.name == walked_path {
 				if is_dir do os2.walker_skip_dir(&fn_walker)
 				continue
 			}
@@ -94,10 +91,7 @@ get_function_arguments :: proc(name: string, path: string, cli_args: CLI_Argumen
 	searching_for := strings.concatenate({name, "("})
 	defer delete(searching_for)
 
-	searching_for_len := len(searching_for)
-
 	starting_idx := strings.index(data, searching_for)
-
 	if starting_idx == -1 {
 		return {}, .Failed_To_Find_Body
 	}
@@ -173,7 +167,7 @@ build_function_snippet :: proc(name: string, snippets: ^map[string]Snippet_Def, 
 
 	snippets[strings.clone(name)] = Snippet_Def {
 		prefix = strings.concatenate({name, "()"}),
-		body   = strings.concatenate({name, arguments_string})
+		body   = strings.concatenate({name, arguments_string}),
 	} 
 
 	delete(arguments_string)
@@ -197,7 +191,7 @@ parse_function :: proc(name: string, path: string, snippets: ^map[string]Snippet
 	if len(arguments) == 0 {
 		snippets[strings.clone(name)] = Snippet_Def {
 			prefix = strings.concatenate({name, "()"}),
-			body   = strings.concatenate({name, "()"})
+			body   = strings.concatenate({name, "()"}),
 		}
 		return
 	}
@@ -229,30 +223,30 @@ parse_constants_and_macros :: proc(name: string, path: string, snippets: ^map[st
 	cleaned_table2, _ := strings.remove_all(cleaned_table1, "<strong>", context.temp_allocator)
 	table, _ := strings.remove_all(cleaned_table2, "</strong>", context.temp_allocator)
 
-	//fmt.println(table)
-
-	doc, err := xml.parse(table)
+	doc, parse_err := xml.parse(table)
+	if parse_err != .None {
+		fmt.println("Error parsing xml table at", path, parse_err)
+	}
 
     idx := 0
     for {
         item, found := xml.find_child_by_ident(doc, 0, "tr", idx)
         if !found {break}
 
-        child, found2 := xml.find_child_by_ident(doc, item, "td")
+        child, _ := xml.find_child_by_ident(doc, item, "td")
 		value := doc.elements[child].value[0].(string)
 		
 		final_value := value
 		if strings.index(value, "“") != -1 {
 			vb_print(value, "had bad quotes")
 			
-			fixed1, allyd1 := strings.replace_all(value, "“", "\"", context.temp_allocator)
-			fixed2, allyd2 := strings.replace_all(fixed1, "”", "\"", context.temp_allocator)
+			fixed1, _ := strings.replace_all(value, "“", "\"", context.temp_allocator)
+			fixed2, _ := strings.replace_all(fixed1, "”", "\"", context.temp_allocator)
 
 			final_value = fixed2
 		}
 
-		unquoted_name, allyd := strings.remove_all(final_value, "\"")
-		defer if allyd do delete(unquoted_name)
+		unquoted_name, _ := strings.remove_all(final_value, "\"", context.temp_allocator)
 
 		if unquoted_name not_in snippets {
 			snippets[strings.clone(unquoted_name)] = Snippet_Def {
@@ -313,7 +307,7 @@ main :: proc() {
 			hwnd = nil,
 			wFunc = windows.FO_DELETE,
 			fFlags = windows.FOF_ALLOWUNDO | windows.FOF_NO_UI,
-			pFrom = conv_str
+			pFrom = conv_str,
 		}
 		windows.SHFileOperationW(&op_struct)
 		free(conv_str)
@@ -327,7 +321,7 @@ main :: proc() {
 			return
 		}
 
-		fmt.println("Writing extension to", extension_path)
+		fmt.println("Writing extension skeleton to", extension_path)
 		skeleton_walker := os2.walker_create(".\\plugin_skeleton")
 		for fi in os2.walker_walk(&skeleton_walker) {
 			if path, err := os2.walker_error(&skeleton_walker); err != nil {
@@ -415,15 +409,17 @@ main :: proc() {
 			for name in macro_doc_paths {
 				path := macro_doc_paths[name]
 
-				// TODO this one has multiple tables ill have to figure this out
+				// TODO: this one has multiple tables ill have to figure this out
 				if name == "Pre-Existing Objects" {continue}
 
 				parse_constants_and_macros(name, path, &snippets)
 			}
 		}
 
-		snippet_json, marshal_err := json.marshal(snippets, {pretty = true}, context.temp_allocator)
+		snippet_json, _ := json.marshal(snippets, {pretty = true}, context.temp_allocator)
 		snippet_path := strings.concatenate({extension_path, "\\snippets\\snippets.json"}, context.temp_allocator)
+		
+		fmt.println("Writing snippets to", snippet_path)
 		err := os2.write_entire_file(snippet_path, snippet_json[:])
 		if err != os2.ERROR_NONE {
 			fmt.println("Error writing the snippet json to the generated plugin", err)

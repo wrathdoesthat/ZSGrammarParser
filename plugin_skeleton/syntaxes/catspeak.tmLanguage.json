@@ -34,7 +34,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.catspeak",
-				"match": "\\b(if|else|return|with|match|while|loop|do|catch|continue|new)\\b"
+				"match": "\\b(if|else|return|with|match|while|loop|do|catch|continue|new|case|break)\\b"
 			}]
 		},
 		"constants": {
