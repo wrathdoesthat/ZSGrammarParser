@@ -1,4 +1,4 @@
-## Need help? tag Wrath in the zero sievert discord.
+## Need help? See a mistake? Tag Wrath in the zero sievert discord.
 
 # Using the plugin
 In order to use the zero sievert modding tools extension simply move the extension into your [VSCode extension directory](https://code.visualstudio.com/docs/configure/extensions/extension-marketplace#_where-are-extensions-installed) (make sure it is unzipped) the version i am distributing in releases is the no asset snippets version
@@ -10,7 +10,6 @@ The command i use to compile odin build . -vet -strict-style
 # Features
 ## Syntax highlighting for the catspeak programming language
 (Previews with the default VSCode theme)\
-The syntax highlighting will be improved over time im sure there are things i have missed.
 
 Without\
 ![Without highlighting](./images/highlighting-without.png)
