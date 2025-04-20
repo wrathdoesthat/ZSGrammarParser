@@ -28,6 +28,9 @@
 		},
 		{
 			"include": "#operators"
+		},
+		{
+			"include": "#comments"
 		}
 	],
 	"repository": {
@@ -88,6 +91,12 @@
 			"patterns": [{
 				"name": "entity.name.function.catspeak",
 				"match": "\\b\\w+(?=\\()"
+			}]
+		},
+		"comments": {
+			"patterns": [{
+				"name": "comment.line.catspeak",
+				"match": "--[^\\n\\r]+(?:[\\n\\r]|\\*\\))"
 			}]
 		}
 	},
