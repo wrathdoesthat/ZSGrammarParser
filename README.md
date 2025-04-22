@@ -8,6 +8,7 @@ If you want to mess with the generator itself you will need the [Odin compiler](
 The command i use to compile odin build . -vet -strict-style
 
 # Features
+NOTE: this is not an lsp you will not get hover/diagnostics only name autofilling and syntax highlighting.
 ## Syntax highlighting for the catspeak programming language
 (Previews with the default VSCode theme)\
 
