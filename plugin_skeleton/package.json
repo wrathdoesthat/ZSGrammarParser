@@ -4,6 +4,11 @@
   "description": "Tools for zero sievert modding",
   "version": "0.0.1",
   "main": "./src/main.js",
+  "publisher": "wrathdoesthat",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wrathdoesthat/ZSGrammarParser"
+  },
   "engines": {
     "vscode": "^1.98.0"
   },
