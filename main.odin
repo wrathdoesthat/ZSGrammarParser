@@ -228,12 +228,12 @@ parse_constants_and_macros :: proc(name: string, path: string, snippets: ^map[st
 		fmt.println("Error parsing xml table at", path, parse_err)
 	}
 
-    idx := 0
-    for {
-        item, found := xml.find_child_by_ident(doc, 0, "tr", idx)
-        if !found {break}
+	idx := 0
+	for {
+		item, found := xml.find_child_by_ident(doc, 0, "tr", idx)
+		if !found {break}
 
-        child, _ := xml.find_child_by_ident(doc, item, "td")
+		child, _ := xml.find_child_by_ident(doc, item, "td")
 		value := doc.elements[child].value[0].(string)
 		
 		final_value := value
@@ -255,8 +255,8 @@ parse_constants_and_macros :: proc(name: string, path: string, snippets: ^map[st
 			}
 		}
 
-        idx += 1
-    }
+		idx += 1
+	}
 
 	xml.destroy(doc)
 	free_all(context.temp_allocator)
