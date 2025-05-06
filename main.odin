@@ -41,6 +41,9 @@ ignored_function_paths : []string = {
 	"Drawing",
 	"Arrays",
 	"Particles",
+
+	// Not meant to exist
+	"Items/Headsets",
 }
 
 vb_print :: proc(args: ..any) {
@@ -53,6 +56,10 @@ dir_files_into_map :: proc(path: string, files: ^map[string]string) {
 	for fi in os2.walker_walk(&fn_walker) {
 		if walked_path, err := os2.walker_error(&fn_walker); err != nil {
 			fmt.println("failed walking", walked_path, err)
+			continue
+		}
+
+		if strings.index(fi.name, "(UNFINISHED)") != -1 || strings.index(fi.name, "(IN PROGRESS)") != -1 {
 			continue
 		}
 
