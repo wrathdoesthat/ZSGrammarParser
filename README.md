@@ -20,3 +20,6 @@ With\
 
 ## Snippets for the API functions
 ![Snippets](./images/snippets.gif)
+
+## Helpful commands
+![Project generation command](./images/generate_command.gif)
