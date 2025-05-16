@@ -2,7 +2,7 @@
   "name": "zsmoddingtools",
   "displayName": "ZSModdingtools",
   "description": "Tools for zero sievert modding",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "main": "./src/main.js",
   "publisher": "wrathdoesthat",
   "repository": {
